@@ -18,8 +18,13 @@ BOOL createRemoteThread(DWORD processId, LPCSTR dllPath) {
 	remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
 
 	WriteProcessMemory(process, remoteString, (LPVOID)dllPath, strlen(dllPath) + 1, NULL);
-	CreateRemoteThread(process, NULL, NULL, (LPTHREAD_START_ROUTINE)loadLibAddress, remoteString, NULL, NULL);
+	HANDLE thread = CreateRemoteThread(process, NULL, NULL, (LPTHREAD_START_ROUTINE)loadLibAddress, remoteString, NULL, NULL);
 
-	CloseHandle(process);
+	WaitForSingleObject(thread, INFINITE);
+	
+	if (remoteString != NULL) VirtualFreeEx(process, remoteString, 0, MEM_RELEASE);
+	if (thread != NULL) CloseHandle(thread);
+	if (process != NULL) CloseHandle(process);
+
 	return TRUE;
 }
