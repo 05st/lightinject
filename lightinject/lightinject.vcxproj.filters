@@ -20,7 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="process.h">
+    <ClInclude Include="process.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

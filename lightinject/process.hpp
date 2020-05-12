@@ -23,3 +23,10 @@ DWORD getProcessId(const char* processName) {
 	CloseHandle(hSnap);
 	return processId;
 }
+
+BOOL isProcessRunning(DWORD processId) {
+	HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, processId);
+	DWORD ret = WaitForSingleObject(process, 0);
+	CloseHandle(process);
+	return ret == WAIT_TIMEOUT;
+}
