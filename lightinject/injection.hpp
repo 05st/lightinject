@@ -6,7 +6,6 @@
 BOOL createRemoteThread(DWORD processId, LPCSTR dllPath) {
 	if (!processId) return FALSE;
 
-	LPVOID loadLibAddress, remoteString;
 	HANDLE process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, processId);
 
 	if (!process) {
@@ -14,8 +13,8 @@ BOOL createRemoteThread(DWORD processId, LPCSTR dllPath) {
 		return FALSE;
 	}
 
-	loadLibAddress = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-	remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
+	LPVOID loadLibAddress = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+	LPVOID remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
 
 	WriteProcessMemory(process, remoteString, (LPVOID)dllPath, strlen(dllPath) + 1, NULL);
 	HANDLE thread = CreateRemoteThread(process, NULL, NULL, (LPTHREAD_START_ROUTINE)loadLibAddress, remoteString, NULL, NULL);
@@ -59,7 +58,6 @@ typedef NTSTATUS(WINAPI* LPFUN_NtCreateThreadEx)(
 BOOL ntCreateThreadEx(DWORD processId, LPCSTR dllPath) {
 	if (!processId) return FALSE;
 
-	LPVOID remoteString;
 	HANDLE remoteThread = NULL;
 	HANDLE process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, processId);
 
@@ -68,10 +66,10 @@ BOOL ntCreateThreadEx(DWORD processId, LPCSTR dllPath) {
 		return FALSE;
 	}
 
-	remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
+	LPVOID remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
 	WriteProcessMemory(process, remoteString, (LPVOID)dllPath, strlen(dllPath) + 1, NULL);
 
-	PTHREAD_START_ROUTINE threadRoutine = (PTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+	PTHREAD_START_ROUTINE loadLibAddress = (PTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
 	PTHREAD_START_ROUTINE ntCreateThreadExAddress = (PTHREAD_START_ROUTINE)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtCreateThreadEx");
 
 	NtCreateThreadExBuffer buffer;
@@ -97,7 +95,7 @@ BOOL ntCreateThreadEx(DWORD processId, LPCSTR dllPath) {
 			0x1FFFFF,
 			NULL,
 			process,
-			threadRoutine,
+			loadLibAddress,
 			(LPVOID)remoteString,
 			FALSE,
 			NULL,
@@ -111,6 +109,51 @@ BOOL ntCreateThreadEx(DWORD processId, LPCSTR dllPath) {
 
 	if (remoteString != NULL) VirtualFreeEx(process, remoteString, 0, MEM_RELEASE);
 	if (remoteThread != NULL) CloseHandle(remoteThread);
+	if (process != NULL) CloseHandle(process);
+
+	return TRUE;
+}
+
+// QueueUserAPC Injection
+BOOL queueUserAPC(DWORD processId, LPCSTR dllPath) {
+	if (!processId) return FALSE;
+
+	HANDLE process = OpenProcess(CREATE_THREAD_ACCESS, FALSE, processId);
+
+	if (!process) {
+		std::cout << "Failed to open process (PID: " + std::to_string(processId) + ")." << std::endl;
+		return FALSE;
+	}
+
+	LPVOID remoteString = (LPVOID)VirtualAllocEx(process, NULL, strlen(dllPath) + 1, MEM_COMMIT, PAGE_READWRITE);
+	LPVOID loadLibAddress = (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+
+	WriteProcessMemory(process, remoteString, (LPVOID)dllPath, (lstrlen(dllPath) + 1) * sizeof(wchar_t), NULL);
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	
+	DWORD threadId = 0;
+	THREADENTRY32 threadEntry;
+	threadEntry.dwSize = sizeof(THREADENTRY32);
+
+	BOOL result = Thread32First(snapshot, &threadEntry);
+	while (result) {
+		result = Thread32Next(snapshot, &threadEntry);
+		if (result) {
+			if (threadEntry.th32OwnerProcessID == processId) {
+				threadId = threadEntry.th32ThreadID;
+				HANDLE thread = OpenThread(THREAD_SET_CONTEXT, FALSE, threadId);
+
+				if (thread) {
+					DWORD result = QueueUserAPC((PAPCFUNC)loadLibAddress, thread, (ULONG_PTR)remoteString);
+					CloseHandle(thread);
+				}
+			}
+		}
+	}
+
+	if (snapshot != NULL) CloseHandle(snapshot);
+	if (remoteString != NULL) VirtualFreeEx(process, remoteString, 0, MEM_RELEASE);
 	if (process != NULL) CloseHandle(process);
 
 	return TRUE;

@@ -8,8 +8,8 @@
 bool validateArguments(int argc, char** argv) {
 	if (argc > 4 || argc < 4) {
 		std::cout << "Invalid usage of LightInject." << std::endl << std::endl;
-		std::cout << "All execution methods: " << std::endl << "(1) CreateRemoteThread\n(2) NtCreateThreadEx" << std::endl << std::endl;
-		std::cout << "Example usage: " << std::endl << ".\\lightinject.exe processName.exe \"C:\\example directory\\example.dll 1\"" << std::endl;
+		std::cout << "All execution methods: " << std::endl << "(1) CreateRemoteThread [RECOMMENDED]\n(2) NtCreateThreadEx\n(3) QueueUserAPC" << std::endl << std::endl;
+		std::cout << "Example usage: " << std::endl << "lightinject.exe processName.exe \"C:\\example directory\\example.dll\" 1" << std::endl;
 		std::cout << "The example above will inject example.dll into processName.exe using CreateRemoteThread injection (method 1)." << std::endl << std::endl;
 		return false;
 	}
@@ -23,7 +23,7 @@ bool validateArguments(int argc, char** argv) {
 			return false;
 		}*/
 		short injectionType = std::stoi(argv[3]);
-		if (injectionType < 1 || injectionType > 2) {
+		if (injectionType < 1 || injectionType > 3) {
 			std::cout << "Invalid injection method. Run without any arguments to see injection methods." << std::endl;
 			return false;
 		}
@@ -43,6 +43,11 @@ int main(int argc, char** argv) {
 	}
 	else if (injectionType == 2) {
 		if (ntCreateThreadEx(processId, argv[2]) == false) {
+			return -1;
+		}
+	}
+	else if (injectionType == 3) {
+		if (queueUserAPC(processId, argv[2]) == false) {
 			return -1;
 		}
 	}
