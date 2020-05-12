@@ -23,5 +23,8 @@
     <ClInclude Include="process.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="injection.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
