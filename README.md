@@ -2,10 +2,10 @@ LightInject
 ===========
 LightInject is a simple command line tool to inject dlls into a process. It supports different injection methods.
 ## Methods ##
-- CreateRemoteThread (1)
-- NxCreateThreadEx (2)
-- QueueUserAPC (3)
-- SetWindowsHookEx (4)
+- CreateRemoteThread (1) *[dllmain_32.dll | dllmain_64.dll]*
+- NxCreateThreadEx (2) *[dllmain_32.dll | dllmain_64.dll]*
+- QueueUserAPC (3) *[dllmain_32.dll | dllmain_64.dll]*
+- SetWindowsHookEx (4) *[dllpoc_32.dll | dllpoc_64.dll]*
 
 Supported OS: Win7-Win10 x64
 ## Usage ##
