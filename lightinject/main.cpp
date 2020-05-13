@@ -18,10 +18,10 @@ bool validateArguments(int argc, char** argv) {
 			std::cout << "The specified process is not running." << std::endl;
 			return false;
 		}
-		/*if (PathFileExists(argv[2]) == false) {
+		if (PathFileExists(argv[2]) == false) {
 			std::cout << "Invalid dll path. Make sure it exists." << std::endl;
 			return false;
-		}*/
+		}
 		short injectionType = std::stoi(argv[3]);
 		if (injectionType < 1 || injectionType > 4) {
 			std::cout << "Invalid injection method. Run without any arguments to see injection methods." << std::endl;
