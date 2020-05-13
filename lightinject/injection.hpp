@@ -158,3 +158,31 @@ BOOL queueUserAPC(DWORD processId, LPCSTR dllPath) {
 
 	return TRUE;
 }
+
+// SetWindowsHookEx Injection
+BOOL setWindowsHookEx(DWORD processId, LPCSTR dllPath, const char* processName) {
+	if (!processId) return FALSE;
+
+	DWORD threadId = getThreadId(processId);
+	if (threadId == 0) std::cout << "Failed to get thread ID." << std::endl; return FALSE;
+
+	HMODULE dll = LoadLibraryEx(dllPath, NULL, DONT_RESOLVE_DLL_REFERENCES);
+	if (dll == NULL) std::cout << "Failed to load DLL." << std::endl; return FALSE;
+
+	HOOKPROC address = (HOOKPROC)GetProcAddress(dll, "poc");
+	if (address == NULL) std::cout << "Failed to find DLL exported function." << std::endl; return FALSE;
+
+	HWND target = FindWindow(NULL, processName);
+	GetWindowThreadProcessId(target, &processId);
+
+	HHOOK handle = SetWindowsHookEx(WH_KEYBOARD, address, dll, threadId);
+	if (handle == NULL) {
+		std::cout << "Failed to hook KEYBOARD, SetWindowsHookEx." << std::endl;
+		return FALSE;
+	}
+	else {
+		UnhookWindowsHookEx(handle);
+	}
+
+	return TRUE;
+}
